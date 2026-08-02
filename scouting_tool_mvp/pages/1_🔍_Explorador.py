@@ -18,9 +18,27 @@ if players.empty:
     st.stop()
 
 players["edad"] = players["fecha_nacimiento"].apply(calculate_age)
-report_counts = reports.groupby("player_id").size().rename("cantidad_reportes") if not reports.empty else pd.Series(dtype=int)
-players = players.merge(report_counts, on="player_id", how="left")
-players["cantidad_reportes"] = players["cantidad_reportes"].fillna(0).astype(int)
+
+if not reports.empty:
+    report_counts = (
+        reports.groupby("player_id")
+        .size()
+        .reset_index(name="cantidad_reportes")
+    )
+
+    players = players.merge(
+        report_counts,
+        on="player_id",
+        how="left",
+    )
+else:
+    players["cantidad_reportes"] = 0
+
+players["cantidad_reportes"] = (
+    players["cantidad_reportes"]
+    .fillna(0)
+    .astype(int)
+)
 
 with st.expander("Filtros", expanded=True):
     c1, c2, c3, c4 = st.columns(4)

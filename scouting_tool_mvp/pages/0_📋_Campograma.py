@@ -18,6 +18,10 @@ st.set_page_config(
 repo = get_repository()
 
 
+# ============================================================
+# LEER DATOS
+# ============================================================
+
 players = repo.read("jugadores")
 reports = repo.read("reportes")
 final_reports = repo.read("informes_finales")
@@ -28,7 +32,7 @@ st.title("📋 Campograma de mercado")
 
 
 # ============================================================
-# CONTROL DE DATOS
+# CONTROL
 # ============================================================
 
 if campograma.empty:
@@ -48,7 +52,9 @@ categorias = sorted(
     [
         x
         for x
-        in campograma["categoria"].unique()
+        in campograma[
+            "categoria"
+        ].unique()
         if x
     ]
 )
@@ -60,28 +66,44 @@ categoria = st.selectbox(
 )
 
 
-campograma_categoria = campograma[
-    campograma["categoria"] == categoria
-].copy()
+campograma_categoria = (
+    campograma[
+        campograma[
+            "categoria"
+        ] == categoria
+    ]
+    .copy()
+)
 
 
 # ============================================================
-# DATOS DE JUGADORES
+# PREPARAR JUGADORES
 # ============================================================
 
 players = players.copy()
 
+
 players["edad"] = (
-    players["fecha_nacimiento"]
-    .apply(calculate_age)
+    players[
+        "fecha_nacimiento"
+    ]
+    .apply(
+        calculate_age
+    )
 )
 
+
+# ============================================================
+# CANTIDAD DE REPORTES
+# ============================================================
 
 if not reports.empty:
 
     report_counts = (
         reports
-        .groupby("player_id")
+        .groupby(
+            "player_id"
+        )
         .size()
         .reset_index(
             name="cantidad_reportes"
@@ -90,13 +112,19 @@ if not reports.empty:
 
 else:
 
-    report_counts = pd.DataFrame(
-        columns=[
-            "player_id",
-            "cantidad_reportes",
-        ]
+    report_counts = (
+        pd.DataFrame(
+            columns=[
+                "player_id",
+                "cantidad_reportes",
+            ]
+        )
     )
 
+
+# ============================================================
+# UNIR CAMPOGRAMA + JUGADORES
+# ============================================================
 
 campograma_categoria = (
     campograma_categoria
@@ -125,7 +153,7 @@ campograma_categoria[
 
 
 # ============================================================
-# HELPERS
+# TARJETA DE JUGADOR
 # ============================================================
 
 def mostrar_jugador_card(
@@ -135,28 +163,23 @@ def mostrar_jugador_card(
 
     nombre = (
         player_row["nombre"]
-        if player_row["nombre"]
-        else "Jugador"
+        or "Jugador"
     )
 
     club = (
         player_row["club"]
-        if player_row["club"]
-        else "Sin club"
+        or "Sin club"
     )
 
     edad = (
         player_row["edad"]
-        if player_row["edad"]
-        else "—"
+        or "—"
     )
 
-    cantidad_reportes = (
-        int(
-            player_row[
-                "cantidad_reportes"
-            ]
-        )
+    cantidad_reportes = int(
+        player_row[
+            "cantidad_reportes"
+        ]
     )
 
 
@@ -172,57 +195,99 @@ def mostrar_jugador_card(
             f"{club} · {edad} años"
         )
 
-        st.caption(
-            f"{cantidad_reportes} reportes"
-        )
+        if cantidad_reportes == 1:
 
-        if st.button(
-            "Ver",
-            key=(
-                f"ver_"
-                f"{key_suffix}_"
-                f"{player_row['player_id']}"
-            ),
-            use_container_width=True,
-        ):
-
-            st.session_state[
-                "campograma_selected_player"
-            ] = player_row[
-                "player_id"
-            ]
-
-
-        if st.button(
-            "Quitar",
-            key=(
-                f"quitar_"
-                f"{key_suffix}_"
-                f"{player_row['player_id']}"
-            ),
-            use_container_width=True,
-        ):
-
-            repo.delete_where(
-                "campograma",
-                "campograma_id",
-                player_row[
-                    "campograma_id"
-                ],
+            st.caption(
+                "1 reporte"
             )
 
-            st.rerun()
+        else:
+
+            st.caption(
+                f"{cantidad_reportes} reportes"
+            )
 
 
-def mostrar_zona(
+        # ----------------------------------------------------
+        # BOTONES
+        # ----------------------------------------------------
+
+        c1, c2 = st.columns(2)
+
+
+        with c1:
+
+            if st.button(
+                "Ver",
+                key=(
+                    f"ver_"
+                    f"{key_suffix}_"
+                    f"{player_row['campograma_id']}"
+                ),
+                use_container_width=True,
+            ):
+
+                st.session_state[
+                    "campograma_selected_player"
+                ] = player_row[
+                    "player_id"
+                ]
+
+
+        with c2:
+
+            if st.button(
+                "Quitar",
+                key=(
+                    f"quitar_"
+                    f"{key_suffix}_"
+                    f"{player_row['campograma_id']}"
+                ),
+                use_container_width=True,
+            ):
+
+                repo.delete_where(
+                    "campograma",
+                    "campograma_id",
+                    player_row[
+                        "campograma_id"
+                    ],
+                )
+
+                # Si justo estaba abierto ese jugador,
+                # limpiamos también la selección.
+
+                if (
+                    st.session_state.get(
+                        "campograma_selected_player"
+                    )
+                    == player_row[
+                        "player_id"
+                    ]
+                ):
+
+                    st.session_state.pop(
+                        "campograma_selected_player",
+                        None,
+                    )
+
+                st.rerun()
+
+
+# ============================================================
+# LISTADO DE UNA POSICIÓN
+# ============================================================
+
+def mostrar_posicion(
     titulo,
     posicion,
-    columnas=3,
+    tarjetas_por_fila=4,
 ):
 
-    st.markdown(
-        f"### {titulo}"
+    st.subheader(
+        titulo
     )
+
 
     zone_players = (
         campograma_categoria[
@@ -230,6 +295,7 @@ def mostrar_zona(
                 "posicion_campograma"
             ] == posicion
         ]
+        .copy()
     )
 
 
@@ -239,210 +305,195 @@ def mostrar_zona(
             "Sin jugadores"
         )
 
+        st.divider()
+
         return
 
 
-    cols = st.columns(
-        columnas
+    # --------------------------------------------------------
+    # Orden
+    # --------------------------------------------------------
+
+    zone_players[
+        "_orden"
+    ] = pd.to_numeric(
+        zone_players[
+            "orden"
+        ],
+        errors="coerce",
     )
 
 
-    for index, (_, row) in enumerate(
+    zone_players = (
+        zone_players
+        .sort_values(
+            [
+                "_orden",
+                "nombre",
+            ],
+            na_position="last",
+        )
+    )
+
+
+    # --------------------------------------------------------
+    # Mostrar tarjetas en filas
+    # --------------------------------------------------------
+
+    rows = list(
         zone_players.iterrows()
+    )
+
+
+    for start in range(
+        0,
+        len(rows),
+        tarjetas_por_fila,
     ):
 
-        with cols[
-            index % columnas
-        ]:
+        bloque = rows[
+            start:
+            start + tarjetas_por_fila
+        ]
 
-            mostrar_jugador_card(
-                row,
-                posicion,
-            )
+
+        columnas = st.columns(
+            tarjetas_por_fila
+        )
+
+
+        for index, (_, row) in enumerate(
+            bloque
+        ):
+
+            with columnas[
+                index
+            ]:
+
+                mostrar_jugador_card(
+                    row,
+                    posicion,
+                )
+
+
+    st.divider()
 
 
 # ============================================================
-# CAMPOGRAMA
+# RESUMEN
 # ============================================================
 
-st.divider()
-
-
-# ------------------------------------------------------------
-# ARQUEROS
-# ------------------------------------------------------------
-
-c1, c2, c3 = st.columns(
-    [1, 2, 1]
-)
-
-with c2:
-
-    mostrar_zona(
-        "ARQUEROS",
-        "ARQUEROS",
-        columnas=2,
-    )
-
-
-st.divider()
-
-
-# ------------------------------------------------------------
-# CENTRALES
-# ------------------------------------------------------------
-
-c1, c2 = st.columns(2)
-
-with c1:
-
-    mostrar_zona(
-        "DEF. CEN. DER.",
-        "DEF.CEN.DER",
-    )
-
-
-with c2:
-
-    mostrar_zona(
-        "DEF. CEN. IZQ.",
-        "DEF.CEN.IZQ",
-    )
-
-
-st.divider()
-
-
-# ------------------------------------------------------------
-# LATERALES + POSICIONAL
-# ------------------------------------------------------------
-
-c1, c2, c3 = st.columns(3)
-
-
-with c1:
-
-    mostrar_zona(
-        "LAT. DER.",
-        "LAT.DER",
-        columnas=2,
-    )
-
-
-with c2:
-
-    mostrar_zona(
-        "VOL. POSICIONAL",
-        "VOL.POSICIONAL",
-        columnas=2,
-    )
-
-
-with c3:
-
-    mostrar_zona(
-        "LAT. IZQ.",
-        "LAT.IZQ",
-        columnas=2,
-    )
-
-
-st.divider()
-
-
-# ------------------------------------------------------------
-# INTERNOS
-# ------------------------------------------------------------
-
-c1, c2 = st.columns(2)
-
-
-with c1:
-
-    mostrar_zona(
-        "INT. CONTENCIÓN",
-        "INT.CONTENCION",
-    )
-
-
-with c2:
-
-    mostrar_zona(
-        "INT. OFENSIVO",
-        "INT.OFENSIVO",
-    )
-
-
-st.divider()
-
-
-# ------------------------------------------------------------
-# VOLANTE OFENSIVO
-# ------------------------------------------------------------
-
-c1, c2, c3 = st.columns(
-    [1, 2, 1]
+total_jugadores = len(
+    campograma_categoria
 )
 
 
-with c2:
+posiciones_cubiertas = (
+    campograma_categoria[
+        "posicion_campograma"
+    ]
+    .nunique()
+)
 
-    mostrar_zona(
-        "VOL. OFENSIVO",
-        "VOL.OFENSIVO",
-    )
+
+c1, c2 = st.columns(2)
+
+
+c1.metric(
+    "Jugadores en campograma",
+    total_jugadores,
+)
+
+
+c2.metric(
+    "Puestos con candidatos",
+    posiciones_cubiertas,
+)
 
 
 st.divider()
 
 
-# ------------------------------------------------------------
-# EXTREMOS
-# ------------------------------------------------------------
+# ============================================================
+# LISTADO DE PUESTOS
+# ============================================================
 
-c1, c2 = st.columns(2)
-
-
-with c1:
-
-    mostrar_zona(
-        "EXTREMOS DER.",
-        "EXTREMOS DER",
-    )
+mostrar_posicion(
+    "ARQUEROS",
+    "ARQUEROS",
+)
 
 
-with c2:
-
-    mostrar_zona(
-        "EXTREMOS IZQ.",
-        "EXTREMOS IZQ",
-    )
+mostrar_posicion(
+    "DEF. CEN. DER.",
+    "DEF.CEN.DER",
+)
 
 
-st.divider()
+mostrar_posicion(
+    "DEF. CEN. IZQ.",
+    "DEF.CEN.IZQ",
+)
 
 
-# ------------------------------------------------------------
-# MEDIA PUNTA / DELANTERO
-# ------------------------------------------------------------
-
-c1, c2 = st.columns(2)
-
-
-with c1:
-
-    mostrar_zona(
-        "MEDIA PUNTA",
-        "MEDIA PUNTA",
-    )
+mostrar_posicion(
+    "LAT. DER.",
+    "LAT.DER",
+)
 
 
-with c2:
+mostrar_posicion(
+    "LAT. IZQ.",
+    "LAT.IZQ",
+)
 
-    mostrar_zona(
-        "DEL. CENTRO",
-        "DEL.CENTRO",
-    )
+
+mostrar_posicion(
+    "VOL. POSICIONAL",
+    "VOL.POSICIONAL",
+)
+
+
+mostrar_posicion(
+    "INT. CONTENCIÓN",
+    "INT.CONTENCION",
+)
+
+
+mostrar_posicion(
+    "INT. OFENSIVO",
+    "INT.OFENSIVO",
+)
+
+
+mostrar_posicion(
+    "VOL. OFENSIVO",
+    "VOL.OFENSIVO",
+)
+
+
+mostrar_posicion(
+    "EXTREMOS DER.",
+    "EXTREMOS DER",
+)
+
+
+mostrar_posicion(
+    "EXTREMOS IZQ.",
+    "EXTREMOS IZQ",
+)
+
+
+mostrar_posicion(
+    "MEDIA PUNTA",
+    "MEDIA PUNTA",
+)
+
+
+mostrar_posicion(
+    "DEL. CENTRO",
+    "DEL.CENTRO",
+)
 
 
 # ============================================================
@@ -464,10 +515,13 @@ selected_id = (
 )
 
 
-selected_player = players[
-    players["player_id"]
-    == selected_id
-]
+selected_player = (
+    players[
+        players[
+            "player_id"
+        ] == selected_id
+    ]
+)
 
 
 if selected_player.empty:
@@ -476,18 +530,23 @@ if selected_player.empty:
 
 
 player = (
-    selected_player.iloc[0]
+    selected_player
+    .iloc[0]
 )
 
 
-st.divider()
+# ============================================================
+# DETALLE
+# ============================================================
 
 st.header(
-    player["nombre"]
+    f'🔎 {player["nombre"]}'
 )
 
 
-c1, c2, c3, c4 = st.columns(4)
+c1, c2, c3, c4, c5 = (
+    st.columns(5)
+)
 
 
 c1.metric(
@@ -520,28 +579,46 @@ c4.metric(
 )
 
 
+c5.metric(
+    "Altura",
+    (
+        f'{player["altura"]} cm'
+        if player["altura"]
+        else "—"
+    ),
+)
+
+
 # ============================================================
-# DOCUMENTOS
+# DOCUMENTOS DEL JUGADOR
 # ============================================================
 
-player_reports = reports[
-    reports["player_id"]
-    == selected_id
-].copy()
+player_reports = (
+    reports[
+        reports[
+            "player_id"
+        ] == selected_id
+    ]
+    .copy()
+)
 
 
-player_final = final_reports[
-    final_reports["player_id"]
-    == selected_id
-].copy()
+player_final = (
+    final_reports[
+        final_reports[
+            "player_id"
+        ] == selected_id
+    ]
+    .copy()
+)
 
 
 document_options = {}
 
 
-# ------------------------------------------------------------
+# ============================================================
 # REPORTES
-# ------------------------------------------------------------
+# ============================================================
 
 if not player_reports.empty:
 
@@ -555,30 +632,50 @@ if not player_reports.empty:
 
 
     for _, report in (
-        player_reports.iterrows()
+        player_reports
+        .iterrows()
     ):
 
-        label = (
-            f'Reporte | '
-            f'{report["fecha_observacion"]} | '
-            f'vs. {report["rival"]}'
+        fecha = (
+            report[
+                "fecha_observacion"
+            ]
+            or "Sin fecha"
         )
+
+        rival = (
+            report[
+                "rival"
+            ]
+            or "Sin rival"
+        )
+
+
+        label = (
+            f"Reporte | "
+            f"{fecha} | "
+            f"vs. {rival}"
+        )
+
 
         document_options[
             label
         ] = {
-            "tipo": "reporte",
-            "data": report,
+            "tipo":
+                "reporte",
+
+            "data":
+                report,
         }
 
 
-# ------------------------------------------------------------
+# ============================================================
 # INFORME FINAL
-# ------------------------------------------------------------
+# ============================================================
 
 if not player_final.empty:
 
-    final_report = (
+    final = (
         player_final
         .sort_values(
             "fecha_modificacion",
@@ -587,28 +684,45 @@ if not player_final.empty:
         .iloc[0]
     )
 
+
     document_options[
         "Informe final"
     ] = {
-        "tipo": "informe",
-        "data": final_report,
+        "tipo":
+            "informe",
+
+        "data":
+            final,
     }
 
+
+# ============================================================
+# SIN DOCUMENTOS
+# ============================================================
 
 if not document_options:
 
     st.info(
-        "Este jugador todavía no tiene documentos."
+        "Este jugador todavía no tiene "
+        "reportes ni informe final."
     )
 
     st.stop()
 
 
+# ============================================================
+# SELECTOR
+# ============================================================
+
 selected_document_label = (
     st.selectbox(
-        "Ver documento",
+        "Documento",
         list(
             document_options.keys()
+        ),
+        key=(
+            f"document_"
+            f"{selected_id}"
         ),
     )
 )
@@ -622,37 +736,53 @@ document = (
 
 
 # ============================================================
-# REPORTE
+# MOSTRAR REPORTE
 # ============================================================
 
-if document["tipo"] == "reporte":
+if (
+    document[
+        "tipo"
+    ] == "reporte"
+):
 
-    report = document["data"]
+    report = (
+        document[
+            "data"
+        ]
+    )
+
 
     st.subheader(
         selected_document_label
     )
 
-    c1, c2, c3 = (
-        st.columns(3)
+
+    c1, c2, c3, c4 = (
+        st.columns(4)
     )
 
 
     c1.write(
         f'**Scout:** '
-        f'{report["scout"]}'
+        f'{report["scout"] or "—"}'
     )
 
 
     c2.write(
-        f'**Valoración:** '
-        f'{report["valoracion_general"]}/5'
+        f'**Posición:** '
+        f'{report["posicion_observada"] or "—"}'
     )
 
 
     c3.write(
+        f'**Valoración:** '
+        f'{report["valoracion_general"] or "—"}/5'
+    )
+
+
+    c4.write(
         f'**Recomendación:** '
-        f'{report["recomendacion"]}'
+        f'{report["recomendacion"] or "—"}'
     )
 
 
@@ -686,7 +816,12 @@ if document["tipo"] == "reporte":
 
     for title, field in sections:
 
-        value = report[field]
+        value = (
+            report[
+                field
+            ]
+        )
+
 
         if value:
 
@@ -699,16 +834,56 @@ if document["tipo"] == "reporte":
             )
 
 
+    if report[
+        "video_url"
+    ]:
+
+        st.link_button(
+            "Abrir video",
+            report[
+                "video_url"
+            ],
+        )
+
+
 # ============================================================
-# INFORME FINAL
+# MOSTRAR INFORME FINAL
 # ============================================================
 
 else:
 
-    final = document["data"]
+    final = (
+        document[
+            "data"
+        ]
+    )
+
 
     st.subheader(
         "Informe final"
+    )
+
+
+    c1, c2, c3 = (
+        st.columns(3)
+    )
+
+
+    c1.write(
+        f'**Estado:** '
+        f'{final["estado"] or "—"}'
+    )
+
+
+    c2.write(
+        f'**Autor:** '
+        f'{final["autor"] or "—"}'
+    )
+
+
+    c3.write(
+        f'**Última modificación:** '
+        f'{final["fecha_modificacion"] or "—"}'
     )
 
 
@@ -749,12 +924,25 @@ else:
             "Conclusión",
             "conclusion",
         ),
+        (
+            "Características determinantes",
+            "caracteristicas_determinantes",
+        ),
+        (
+            "Enlaces de video",
+            "enlaces_video",
+        ),
     ]
 
 
     for title, field in sections:
 
-        value = final[field]
+        value = (
+            final[
+                field
+            ]
+        )
+
 
         if value:
 

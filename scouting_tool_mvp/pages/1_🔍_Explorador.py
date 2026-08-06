@@ -1,7 +1,12 @@
 import pandas as pd
 import streamlit as st
 
-from data_access import get_repository
+from data_access import (
+    get_repository,
+    make_id,
+    now_iso,
+)
+
 from utils import calculate_age
 
 
@@ -17,33 +22,31 @@ st.set_page_config(
 
 repo = get_repository()
 
+
 players = repo.read("jugadores")
 reports = repo.read("reportes")
 final_reports = repo.read("informes_finales")
+campograma = repo.read("campograma")
 
 
 st.title("🔍 Explorador de jugadores")
 
 
 # ============================================================
-# CONTROL DE BASE VACÍA
+# CONTROL
 # ============================================================
 
 if players.empty:
-    st.info("Todavía no hay jugadores cargados.")
+
+    st.info(
+        "Todavía no hay jugadores cargados."
+    )
+
     st.stop()
 
 
 # ============================================================
-# CAMPGRAMA - SESSION STATE
-# ============================================================
-
-if "campograma_ids" not in st.session_state:
-    st.session_state["campograma_ids"] = []
-
-
-# ============================================================
-# PREPARACIÓN DE JUGADORES
+# PREPARAR JUGADORES
 # ============================================================
 
 players = players.copy()
@@ -53,10 +56,6 @@ players["edad"] = (
     .apply(calculate_age)
 )
 
-
-# ------------------------------------------------------------
-# Cantidad de reportes
-# ------------------------------------------------------------
 
 if not reports.empty:
 
@@ -77,11 +76,17 @@ if not reports.empty:
 
 else:
 
-    players["cantidad_reportes"] = 0
+    players[
+        "cantidad_reportes"
+    ] = 0
 
 
-players["cantidad_reportes"] = (
-    players["cantidad_reportes"]
+players[
+    "cantidad_reportes"
+] = (
+    players[
+        "cantidad_reportes"
+    ]
     .fillna(0)
     .astype(int)
 )
@@ -96,7 +101,9 @@ with st.expander(
     expanded=True,
 ):
 
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4 = (
+        st.columns(4)
+    )
 
     search = c1.text_input(
         "Nombre"
@@ -132,7 +139,7 @@ with st.expander(
         ["Todas"] + positions,
     )
 
-    foot_options = sorted(
+    feet = sorted(
         [
             x
             for x
@@ -143,13 +150,14 @@ with st.expander(
 
     foot = c4.selectbox(
         "Pie",
-        ["Todos"] + foot_options,
+        ["Todos"] + feet,
     )
 
+    c5, c6, c7 = (
+        st.columns(3)
+    )
 
-    c5, c6, c7 = st.columns(3)
-
-    competitions = sorted(
+    categories = sorted(
         [
             x
             for x
@@ -160,36 +168,36 @@ with st.expander(
         ]
     )
 
-    competition = c5.selectbox(
-        "Competición",
-        ["Todas"] + competitions,
+    category = c5.selectbox(
+        "Categoría",
+        ["Todas"] + categories,
     )
 
-    min_reports = c6.number_input(
-        "Cantidad mínima de reportes",
-        min_value=0,
-        value=0,
+    min_reports = (
+        c6.number_input(
+            "Cantidad mínima de reportes",
+            min_value=0,
+            value=0,
+        )
     )
 
-    status_options = sorted(
+    statuses = sorted(
         [
             x
             for x
-            in players[
-                "estado"
-            ].unique()
+            in players["estado"].unique()
             if x
         ]
     )
 
     status = c7.selectbox(
         "Estado",
-        ["Todos"] + status_options,
+        ["Todos"] + statuses,
     )
 
 
 # ============================================================
-# APLICAR FILTROS
+# FILTRAR
 # ============================================================
 
 filtered = players.copy()
@@ -230,12 +238,12 @@ if foot != "Todos":
     ]
 
 
-if competition != "Todas":
+if category != "Todas":
 
     filtered = filtered[
         filtered[
             "competicion"
-        ] == competition
+        ] == category
     ]
 
 
@@ -268,7 +276,22 @@ if filtered.empty:
 
 
 # ============================================================
-# TABLA DE JUGADORES
+# JUGADORES YA EN CAMPOGRAMA
+# ============================================================
+
+campograma_player_ids = (
+    campograma[
+        "player_id"
+    ]
+    .astype(str)
+    .tolist()
+    if not campograma.empty
+    else []
+)
+
+
+# ============================================================
+# DATAFRAME
 # ============================================================
 
 st.subheader(
@@ -293,10 +316,6 @@ table_df = (
 )
 
 
-# ------------------------------------------------------------
-# Columnas interactivas
-# ------------------------------------------------------------
-
 table_df.insert(
     0,
     "Ver",
@@ -304,12 +323,14 @@ table_df.insert(
 )
 
 
-table_df["Agregar a campograma"] = (
-    table_df["player_id"]
+table_df[
+    "Agregar a campograma"
+] = (
+    table_df[
+        "player_id"
+    ]
     .isin(
-        st.session_state[
-            "campograma_ids"
-        ]
+        campograma_player_ids
     )
 )
 
@@ -333,10 +354,6 @@ edited_df = st.data_editor(
         "Ver":
             st.column_config.CheckboxColumn(
                 "Ver",
-                help=(
-                    "Seleccioná el jugador "
-                    "que querés consultar."
-                ),
                 default=False,
             ),
 
@@ -391,41 +408,207 @@ edited_df = st.data_editor(
 
 
 # ============================================================
-# ACTUALIZAR CAMPGRAMA
+# AGREGAR AL CAMPOGRAMA
 # ============================================================
 
-campograma_ids = (
-    edited_df.loc[
+USUARIOS_APP = [
+    "Juan Pablo Bouzas",
+    "Kevin Quisbert",
+    "Roberto Aboian",
+]
+
+
+POSICIONES_LATERALES = {
+
+    "Defensor central": [
+        "DEF.CEN.DER",
+        "DEF.CEN.IZQ",
+    ],
+
+    "Lateral": [
+        "LAT.DER",
+        "LAT.IZQ",
+    ],
+
+    "Extremo": [
+        "EXTREMOS DER",
+        "EXTREMOS IZQ",
+    ],
+}
+
+
+POSICIONES_AUTOMATICAS = {
+
+    "Arquero":
+        "ARQUEROS",
+
+    "Volante posicional":
+        "VOL.POSICIONAL",
+
+    "Volante interno/contención":
+        "INT.CONTENCION",
+
+    "Volante interno/ofensivo":
+        "INT.OFENSIVO",
+
+    "Volante ofensivo":
+        "VOL.OFENSIVO",
+
+    "Mediapunta":
+        "MEDIA PUNTA",
+
+    "Delantero centro":
+        "DEL.CENTRO",
+}
+
+
+selected_for_campograma = (
+    edited_df[
         edited_df[
             "Agregar a campograma"
-        ],
-        "player_id",
+        ]
     ]
-    .astype(str)
-    .tolist()
+    .copy()
 )
 
 
-st.session_state[
-    "campograma_ids"
-] = campograma_ids
+new_for_campograma = (
+    selected_for_campograma[
+        ~selected_for_campograma[
+            "player_id"
+        ]
+        .isin(
+            campograma_player_ids
+        )
+    ]
+)
 
 
-if campograma_ids:
+if not new_for_campograma.empty:
 
-    st.caption(
-        f"{len(campograma_ids)} "
-        f"jugadores agregados al campograma."
+    st.markdown(
+        "### Agregar al campograma"
     )
 
+    agregado_por = st.selectbox(
+        "Agregado por",
+        USUARIOS_APP,
+        key="campograma_agregado_por",
+    )
+
+    pending_rows = []
+
+    for _, row in (
+        new_for_campograma
+        .iterrows()
+    ):
+
+        posicion_principal = (
+            row[
+                "posicion_principal"
+            ]
+        )
+
+        st.markdown(
+            f'**{row["nombre"]} — {row["club"]}**'
+        )
+
+        if (
+            posicion_principal
+            in POSICIONES_LATERALES
+        ):
+
+            posicion_campograma = (
+                st.selectbox(
+                    "Ubicación",
+                    POSICIONES_LATERALES[
+                        posicion_principal
+                    ],
+                    key=(
+                        f'camp_pos_'
+                        f'{row["player_id"]}'
+                    ),
+                )
+            )
+
+        elif (
+            posicion_principal
+            in POSICIONES_AUTOMATICAS
+        ):
+
+            posicion_campograma = (
+                POSICIONES_AUTOMATICAS[
+                    posicion_principal
+                ]
+            )
+
+            st.caption(
+                f"Ubicación: "
+                f"{posicion_campograma}"
+            )
+
+        else:
+
+            posicion_campograma = None
+
+            st.warning(
+                "No hay ubicación configurada."
+            )
+
+        if posicion_campograma:
+
+            pending_rows.append(
+                {
+                    "campograma_id":
+                        make_id("CMP"),
+
+                    "player_id":
+                        row["player_id"],
+
+                    "categoria":
+                        row["competicion"],
+
+                    "posicion_campograma":
+                        posicion_campograma,
+
+                    "orden":
+                        "",
+
+                    "fecha_agregado":
+                        now_iso(),
+
+                    "agregado_por":
+                        agregado_por,
+                }
+            )
+
+
+    if st.button(
+        "Guardar en campograma",
+        type="primary",
+    ):
+
+        repo.append(
+            "campograma",
+            pending_rows,
+        )
+
+        st.success(
+            "Jugador/es agregados al campograma."
+        )
+
+        st.rerun()
+
 
 # ============================================================
-# SELECCIONAR JUGADOR
+# VER JUGADOR
 # ============================================================
 
-selected_rows = edited_df[
-    edited_df["Ver"]
-]
+selected_rows = (
+    edited_df[
+        edited_df["Ver"]
+    ]
+)
 
 
 if selected_rows.empty:
@@ -438,11 +621,9 @@ if selected_rows.empty:
     st.stop()
 
 
-# Si por accidente se seleccionan varios,
-# tomamos el primero.
-
 selected_id = (
-    selected_rows.iloc[0][
+    selected_rows
+    .iloc[0][
         "player_id"
     ]
 )
@@ -459,7 +640,7 @@ player = (
 
 
 # ============================================================
-# FICHA DEL JUGADOR
+# FICHA
 # ============================================================
 
 st.divider()
@@ -525,7 +706,7 @@ m6.metric(
 
 
 # ============================================================
-# DOCUMENTOS DISPONIBLES
+# DOCUMENTOS
 # ============================================================
 
 st.subheader(
@@ -543,7 +724,7 @@ player_reports = (
 )
 
 
-player_final_reports = (
+player_final = (
     final_reports[
         final_reports[
             "player_id"
@@ -556,10 +737,6 @@ player_final_reports = (
 document_options = {}
 
 
-# ------------------------------------------------------------
-# Reportes por partido
-# ------------------------------------------------------------
-
 if not player_reports.empty:
 
     player_reports = (
@@ -571,24 +748,14 @@ if not player_reports.empty:
     )
 
     for _, report in (
-        player_reports.iterrows()
+        player_reports
+        .iterrows()
     ):
 
-        fecha_display = (
-            report[
-                "fecha_observacion"
-            ]
-        )
-
-        rival_display = (
-            report["rival"]
-            or "Rival sin definir"
-        )
-
         label = (
-            f"Reporte | "
-            f"{fecha_display} | "
-            f"vs. {rival_display}"
+            f'Reporte | '
+            f'{report["fecha_observacion"]} | '
+            f'vs. {report["rival"]}'
         )
 
         document_options[
@@ -599,14 +766,10 @@ if not player_reports.empty:
         }
 
 
-# ------------------------------------------------------------
-# Informe final
-# ------------------------------------------------------------
+if not player_final.empty:
 
-if not player_final_reports.empty:
-
-    final_report = (
-        player_final_reports
+    final = (
+        player_final
         .sort_values(
             "fecha_modificacion",
             ascending=False,
@@ -618,39 +781,30 @@ if not player_final_reports.empty:
         "Informe final"
     ] = {
         "tipo": "informe",
-        "data": final_report,
+        "data": final,
     }
 
-
-# ============================================================
-# SIN DOCUMENTOS
-# ============================================================
 
 if not document_options:
 
     st.info(
-        "Este jugador todavía no tiene "
-        "reportes ni informe final."
+        "Este jugador todavía no tiene documentos."
     )
 
     st.stop()
 
 
-# ============================================================
-# SELECTOR DE DOCUMENTO
-# ============================================================
-
 selected_document_label = (
     st.selectbox(
-        "Seleccionar documento",
-        options=list(
+        "Ver documento",
+        list(
             document_options.keys()
         ),
     )
 )
 
 
-selected_document = (
+document = (
     document_options[
         selected_document_label
     ]
@@ -661,20 +815,12 @@ st.divider()
 
 
 # ============================================================
-# MOSTRAR REPORTE
+# REPORTE
 # ============================================================
 
-if (
-    selected_document[
-        "tipo"
-    ] == "reporte"
-):
+if document["tipo"] == "reporte":
 
-    report = (
-        selected_document[
-            "data"
-        ]
-    )
+    report = document["data"]
 
     c1, c2, c3, c4 = (
         st.columns(4)
@@ -702,41 +848,23 @@ if (
 
 
     sections = [
-        (
-            "Observaciones",
-            "observaciones",
-        ),
-        (
-            "Perfil físico",
-            "perfil_fisico",
-        ),
-        (
-            "Perfil táctico",
-            "perfil_tactico",
-        ),
-        (
-            "Perfil técnico",
-            "perfil_tecnico",
-        ),
-        (
-            "Perfil mental",
-            "perfil_mental",
-        ),
-        (
-            "Fases del juego",
-            "fases_juego",
-        ),
+        ("Observaciones", "observaciones"),
+        ("Perfil físico", "perfil_fisico"),
+        ("Perfil táctico", "perfil_tactico"),
+        ("Perfil técnico", "perfil_tecnico"),
+        ("Perfil mental", "perfil_mental"),
+        ("Fases del juego", "fases_juego"),
     ]
 
 
-    for label, field in sections:
+    for title, field in sections:
 
         value = report[field]
 
         if value:
 
             st.markdown(
-                f"### {label}"
+                f"### {title}"
             )
 
             st.write(
@@ -755,101 +883,36 @@ if (
 
 
 # ============================================================
-# MOSTRAR INFORME FINAL
+# INFORME FINAL
 # ============================================================
 
-elif (
-    selected_document[
-        "tipo"
-    ] == "informe"
-):
+else:
 
-    final = (
-        selected_document[
-            "data"
-        ]
-    )
+    final = document["data"]
 
-
-    c1, c2, c3 = (
-        st.columns(3)
-    )
-
-
-    c1.write(
-        f'**Estado:** '
-        f'{final["estado"] or "—"}'
-    )
-
-
-    c2.write(
-        f'**Autor:** '
-        f'{final["autor"] or "—"}'
-    )
-
-
-    c3.write(
-        f'**Última modificación:** '
-        f'{final["fecha_modificacion"] or "—"}'
-    )
-
-
-    final_sections = [
-        (
-            "Observaciones generales",
-            "observaciones",
-        ),
-        (
-            "Perfil físico",
-            "perfil_fisico",
-        ),
-        (
-            "Perfil táctico",
-            "perfil_tactico",
-        ),
-        (
-            "Perfil técnico",
-            "perfil_tecnico",
-        ),
-        (
-            "Perfil mental",
-            "perfil_mental",
-        ),
-        (
-            "Fases del juego",
-            "fases_juego",
-        ),
-        (
-            "Áreas consolidadas",
-            "areas_consolidadas",
-        ),
-        (
-            "Áreas de mejora",
-            "areas_mejora",
-        ),
-        (
-            "Conclusión",
-            "conclusion",
-        ),
-        (
-            "Características determinantes",
-            "caracteristicas_determinantes",
-        ),
-        (
-            "Enlaces de video",
-            "enlaces_video",
-        ),
+    sections = [
+        ("Observaciones generales", "observaciones"),
+        ("Perfil físico", "perfil_fisico"),
+        ("Perfil táctico", "perfil_tactico"),
+        ("Perfil técnico", "perfil_tecnico"),
+        ("Perfil mental", "perfil_mental"),
+        ("Fases del juego", "fases_juego"),
+        ("Áreas consolidadas", "areas_consolidadas"),
+        ("Áreas de mejora", "areas_mejora"),
+        ("Conclusión", "conclusion"),
+        ("Características determinantes", "caracteristicas_determinantes"),
+        ("Enlaces de video", "enlaces_video"),
     ]
 
 
-    for label, field in final_sections:
+    for title, field in sections:
 
         value = final[field]
 
         if value:
 
             st.markdown(
-                f"### {label}"
+                f"### {title}"
             )
 
             st.write(

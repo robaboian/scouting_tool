@@ -14,6 +14,10 @@ from config import using_google_sheets
 DATA_DIR = Path(__file__).resolve().parent / "data"
 
 
+# ============================================================
+# ESTRUCTURA DE TABLAS
+# ============================================================
+
 TABLE_COLUMNS = {
     "jugadores": [
         "player_id",
@@ -104,6 +108,10 @@ TABLE_COLUMNS = {
 }
 
 
+# ============================================================
+# HELPERS
+# ============================================================
+
 def make_id(prefix: str) -> str:
     return f"{prefix}-{uuid4().hex[:8].upper()}"
 
@@ -113,48 +121,70 @@ def now_iso() -> str:
 
 
 # ============================================================
-# LOCAL CSV
+# REPOSITORIO LOCAL CSV
 # ============================================================
 
 class LocalCSVRepository:
 
     def __init__(self, data_dir: Path = DATA_DIR):
         self.data_dir = data_dir
-        self.data_dir.mkdir(parents=True, exist_ok=True)
+        self.data_dir.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
         self._ensure_tables()
+
 
     def _path(self, table: str) -> Path:
         return self.data_dir / f"{table}.csv"
 
+
     def _ensure_tables(self) -> None:
+
         for table, columns in TABLE_COLUMNS.items():
+
             path = self._path(table)
 
             if not path.exists():
-                pd.DataFrame(columns=columns).to_csv(
+
+                pd.DataFrame(
+                    columns=columns
+                ).to_csv(
                     path,
                     index=False,
                 )
 
-    def read(self, table: str) -> pd.DataFrame:
+
+    def read(
+        self,
+        table: str,
+    ) -> pd.DataFrame:
+
         path = self._path(table)
 
         try:
+
             df = pd.read_csv(
                 path,
                 dtype=str,
             ).fillna("")
 
         except pd.errors.EmptyDataError:
+
             df = pd.DataFrame(
                 columns=TABLE_COLUMNS[table]
             )
 
         for column in TABLE_COLUMNS[table]:
+
             if column not in df.columns:
                 df[column] = ""
 
-        return df[TABLE_COLUMNS[table]]
+        return df[
+            TABLE_COLUMNS[table]
+        ]
+
 
     def append(
         self,
@@ -172,13 +202,16 @@ class LocalCSVRepository:
         incoming = pd.DataFrame(rows)
 
         for column in TABLE_COLUMNS[table]:
+
             if column not in incoming.columns:
                 incoming[column] = ""
 
         updated = pd.concat(
             [
                 current,
-                incoming[TABLE_COLUMNS[table]],
+                incoming[
+                    TABLE_COLUMNS[table]
+                ],
             ],
             ignore_index=True,
         )
@@ -187,6 +220,7 @@ class LocalCSVRepository:
             self._path(table),
             index=False,
         )
+
 
     def upsert(
         self,
@@ -197,38 +231,56 @@ class LocalCSVRepository:
 
         current = self.read(table)
 
-        value = str(row[key])
+        value = str(
+            row[key]
+        )
 
-        if (
-            key in current.columns
-            and (
-                current[key].astype(str) == value
-            ).any()
-        ):
+        matches = (
+            current[key]
+            .astype(str)
+            == value
+        )
+
+        if matches.any():
+
             idx = current.index[
-                current[key].astype(str) == value
+                matches
             ][0]
 
             for column in TABLE_COLUMNS[table]:
-                current.loc[idx, column] = str(
+
+                current.loc[
+                    idx,
+                    column
+                ] = str(
                     row.get(
                         column,
-                        current.loc[idx, column],
+                        current.loc[
+                            idx,
+                            column
+                        ],
                     )
                 )
 
         else:
+
             incoming = {
                 column: str(
-                    row.get(column, "")
+                    row.get(
+                        column,
+                        "",
+                    )
                 )
-                for column in TABLE_COLUMNS[table]
+                for column
+                in TABLE_COLUMNS[table]
             }
 
             current = pd.concat(
                 [
                     current,
-                    pd.DataFrame([incoming]),
+                    pd.DataFrame(
+                        [incoming]
+                    ),
                 ],
                 ignore_index=True,
             )
@@ -237,6 +289,7 @@ class LocalCSVRepository:
             self._path(table),
             index=False,
         )
+
 
     def replace(
         self,
@@ -247,6 +300,7 @@ class LocalCSVRepository:
         dataframe = dataframe.copy()
 
         for column in TABLE_COLUMNS[table]:
+
             if column not in dataframe.columns:
                 dataframe[column] = ""
 
@@ -256,6 +310,7 @@ class LocalCSVRepository:
             self._path(table),
             index=False,
         )
+
 
     def delete_where(
         self,
@@ -287,7 +342,7 @@ class LocalCSVRepository:
 
 
 # ============================================================
-# GOOGLE SHEETS
+# REPOSITORIO GOOGLE SHEETS
 # ============================================================
 
 class GoogleSheetsRepository:
@@ -313,8 +368,14 @@ class GoogleSheetsRepository:
                     ]
                 ),
                 scopes=[
-                    "https://www.googleapis.com/auth/spreadsheets",
-                    "https://www.googleapis.com/auth/drive",
+                    (
+                        "https://www.googleapis.com/"
+                        "auth/spreadsheets"
+                    ),
+                    (
+                        "https://www.googleapis.com/"
+                        "auth/drive"
+                    ),
                 ],
             )
         )
@@ -329,26 +390,70 @@ class GoogleSheetsRepository:
             ]
         )
 
+        # ----------------------------------------------------
+        # Guardamos referencias de todas las hojas una vez
+        # ----------------------------------------------------
+
+        self._worksheets = {
+            ws.title: ws
+            for ws
+            in self.book.worksheets()
+        }
+
         self._ensure_tables()
+
+
+    # ========================================================
+    # WORKSHEETS
+    # ========================================================
 
     def _worksheet(
         self,
         table: str,
     ):
-        return self.book.worksheet(
+
+        # Si ya está en memoria, no volvemos a pedir
+        # metadata del spreadsheet.
+
+        if table in self._worksheets:
+
+            return self._worksheets[
+                table
+            ]
+
+        # Si falta por algún motivo, la creamos.
+
+        columns = TABLE_COLUMNS[
             table
+        ]
+
+        ws = self.book.add_worksheet(
+            title=table,
+            rows=1000,
+            cols=max(
+                20,
+                len(columns),
+            ),
         )
 
-    def _ensure_tables(self):
+        ws.append_row(
+            columns
+        )
 
-        existing = {
-            ws.title
-            for ws in self.book.worksheets()
-        }
+        self._worksheets[
+            table
+        ] = ws
+
+        return ws
+
+
+    def _ensure_tables(
+        self,
+    ) -> None:
 
         for table, columns in TABLE_COLUMNS.items():
 
-            if table not in existing:
+            if table not in self._worksheets:
 
                 ws = self.book.add_worksheet(
                     title=table,
@@ -363,13 +468,26 @@ class GoogleSheetsRepository:
                     columns
                 )
 
+                self._worksheets[
+                    table
+                ] = ws
+
+
+    # ========================================================
+    # READ
+    # ========================================================
+
     def read(
         self,
         table: str,
     ) -> pd.DataFrame:
 
+        ws = self._worksheet(
+            table
+        )
+
         records = (
-            self._worksheet(table)
+            ws
             .get_all_records()
         )
 
@@ -390,6 +508,11 @@ class GoogleSheetsRepository:
             .fillna("")
         )
 
+
+    # ========================================================
+    # APPEND
+    # ========================================================
+
     def append(
         self,
         table: str,
@@ -402,6 +525,7 @@ class GoogleSheetsRepository:
             return
 
         values = [
+
             [
                 str(
                     row.get(
@@ -409,18 +533,32 @@ class GoogleSheetsRepository:
                         "",
                     )
                 )
+
                 for column
-                in TABLE_COLUMNS[table]
+                in TABLE_COLUMNS[
+                    table
+                ]
             ]
-            for row in rows
+
+            for row
+            in rows
         ]
 
-        self._worksheet(
+        ws = self._worksheet(
             table
-        ).append_rows(
-            values,
-            value_input_option="USER_ENTERED",
         )
+
+        ws.append_rows(
+            values,
+            value_input_option=(
+                "USER_ENTERED"
+            ),
+        )
+
+
+    # ========================================================
+    # UPSERT
+    # ========================================================
 
     def upsert(
         self,
@@ -442,21 +580,28 @@ class GoogleSheetsRepository:
         )
 
         payload = [
+
             str(
                 row.get(
                     column,
                     "",
                 )
             )
+
             for column
-            in TABLE_COLUMNS[table]
+            in TABLE_COLUMNS[
+                table
+            ]
         ]
 
-        matches = df.index[
-            df[key]
-            .astype(str)
-            == value
-        ].tolist()
+        matches = (
+            df.index[
+                df[key]
+                .astype(str)
+                == value
+            ]
+            .tolist()
+        )
 
         if matches:
 
@@ -468,15 +613,24 @@ class GoogleSheetsRepository:
             ws.update(
                 f"A{sheet_row}",
                 [payload],
-                value_input_option="USER_ENTERED",
+                value_input_option=(
+                    "USER_ENTERED"
+                ),
             )
 
         else:
 
             ws.append_row(
                 payload,
-                value_input_option="USER_ENTERED",
+                value_input_option=(
+                    "USER_ENTERED"
+                ),
             )
+
+
+    # ========================================================
+    # REPLACE
+    # ========================================================
 
     def replace(
         self,
@@ -488,7 +642,10 @@ class GoogleSheetsRepository:
             table
         )
 
-        dataframe = dataframe.copy()
+        dataframe = (
+            dataframe
+            .copy()
+        )
 
         for column in TABLE_COLUMNS[table]:
 
@@ -504,8 +661,12 @@ class GoogleSheetsRepository:
         )
 
         values = [
-            TABLE_COLUMNS[table],
-            *dataframe.values.tolist(),
+            TABLE_COLUMNS[
+                table
+            ],
+            *dataframe
+            .values
+            .tolist(),
         ]
 
         ws.clear()
@@ -513,8 +674,15 @@ class GoogleSheetsRepository:
         ws.update(
             "A1",
             values,
-            value_input_option="USER_ENTERED",
+            value_input_option=(
+                "USER_ENTERED"
+            ),
         )
+
+
+    # ========================================================
+    # DELETE
+    # ========================================================
 
     def delete_where(
         self,
@@ -527,16 +695,24 @@ class GoogleSheetsRepository:
             table
         )
 
-        if isinstance(values, str):
-            values = [values]
+        if isinstance(
+            values,
+            str,
+        ):
+            values = [
+                values
+            ]
 
         values = {
             str(value)
-            for value in values
+            for value
+            in values
         }
 
         updated = current[
-            ~current[column]
+            ~current[
+                column
+            ]
             .astype(str)
             .isin(values)
         ].copy()
@@ -548,13 +724,18 @@ class GoogleSheetsRepository:
 
 
 # ============================================================
-# REPOSITORY
+# REPOSITORY FACTORY
 # ============================================================
 
 @st.cache_resource
 def get_repository():
 
     if using_google_sheets():
-        return GoogleSheetsRepository()
 
-    return LocalCSVRepository()
+        return (
+            GoogleSheetsRepository()
+        )
+
+    return (
+        LocalCSVRepository()
+    )

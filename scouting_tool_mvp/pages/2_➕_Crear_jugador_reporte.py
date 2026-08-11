@@ -1020,17 +1020,39 @@ with tab_manage:
                     )
                 )
 
-                try:
 
-                    current_birth_date = (
+                # ============================================
+                # FECHA DE NACIMIENTO SEGURA
+                # ============================================
+
+                birth_value = (
+                    selected_player[
+                        "fecha_nacimiento"
+                    ]
+                )
+
+                if (
+                    pd.notna(birth_value)
+                    and str(birth_value).strip()
+                ):
+
+                    parsed_birth_date = (
                         pd.to_datetime(
-                            selected_player[
-                                "fecha_nacimiento"
-                            ]
-                        ).date()
+                            birth_value,
+                            errors="coerce",
+                        )
                     )
 
-                except Exception:
+                    if pd.notna(
+                        parsed_birth_date
+                    ):
+                        current_birth_date = (
+                            parsed_birth_date.date()
+                        )
+                    else:
+                        current_birth_date = None
+
+                else:
 
                     current_birth_date = None
 
@@ -1185,9 +1207,18 @@ with tab_manage:
                                     ]
                                 )
                             )
-                            if selected_player[
-                                "altura"
-                            ]
+                            if (
+                                pd.notna(
+                                    selected_player[
+                                        "altura"
+                                    ]
+                                )
+                                and str(
+                                    selected_player[
+                                        "altura"
+                                    ]
+                                ).strip()
+                            )
                             else 0
                         ),
                     )
@@ -1207,26 +1238,56 @@ with tab_manage:
                                     ]
                                 )
                             )
-                            if selected_player[
-                                "peso"
-                            ]
+                            if (
+                                pd.notna(
+                                    selected_player[
+                                        "peso"
+                                    ]
+                                )
+                                and str(
+                                    selected_player[
+                                        "peso"
+                                    ]
+                                ).strip()
+                            )
                             else 0
                         ),
                     )
                 )
 
 
-                try:
+                # ============================================
+                # FIN DE CONTRATO SEGURO
+                # ============================================
 
-                    current_contract_date = (
+                contract_value = (
+                    selected_player[
+                        "fin_contrato"
+                    ]
+                )
+
+                if (
+                    pd.notna(contract_value)
+                    and str(contract_value).strip()
+                ):
+
+                    parsed_contract_date = (
                         pd.to_datetime(
-                            selected_player[
-                                "fin_contrato"
-                            ]
-                        ).date()
+                            contract_value,
+                            errors="coerce",
+                        )
                     )
 
-                except Exception:
+                    if pd.notna(
+                        parsed_contract_date
+                    ):
+                        current_contract_date = (
+                            parsed_contract_date.date()
+                        )
+                    else:
+                        current_contract_date = None
+
+                else:
 
                     current_contract_date = None
 
@@ -1305,9 +1366,17 @@ with tab_manage:
                 edited_link = (
                     st.text_input(
                         "Enlace externo",
-                        value=selected_player[
-                            "enlace_externo"
-                        ],
+                        value=(
+                            selected_player[
+                                "enlace_externo"
+                            ]
+                            if pd.notna(
+                                selected_player[
+                                    "enlace_externo"
+                                ]
+                            )
+                            else ""
+                        ),
                     )
                 )
 
@@ -1498,7 +1567,7 @@ with tab_manage:
             if delete_player:
 
                 # --------------------------------------------
-                # Áreas y características de sus reportes
+                # ÁREAS Y CARACTERÍSTICAS
                 # --------------------------------------------
 
                 if report_ids:
@@ -1517,7 +1586,7 @@ with tab_manage:
 
 
                 # --------------------------------------------
-                # Reportes
+                # REPORTES
                 # --------------------------------------------
 
                 repo.delete_where(
@@ -1528,7 +1597,7 @@ with tab_manage:
 
 
                 # --------------------------------------------
-                # Informe final
+                # INFORME FINAL
                 # --------------------------------------------
 
                 repo.delete_where(
@@ -1539,7 +1608,18 @@ with tab_manage:
 
 
                 # --------------------------------------------
-                # Jugador
+                # CAMPOGRAMA
+                # --------------------------------------------
+
+                repo.delete_where(
+                    "campograma",
+                    "player_id",
+                    selected_manage_id,
+                )
+
+
+                # --------------------------------------------
+                # JUGADOR
                 # --------------------------------------------
 
                 repo.delete_where(

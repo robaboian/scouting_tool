@@ -1,5 +1,7 @@
-import streamlit as st
 from pathlib import Path
+from textwrap import dedent
+
+import streamlit as st
 
 
 # ============================================================
@@ -18,120 +20,135 @@ st.set_page_config(
 # ============================================================
 
 st.markdown(
-    """
-    <style>
+    dedent(
+        """
+        <style>
 
-    /* Fondo general */
-    .stApp {
-        background-color: #F7F7F7;
-    }
+        .stApp {
+            background-color: #F7F7F7;
+        }
 
-    /* Ocultar padding exagerado superior */
-    .block-container {
-        padding-top: 2rem;
-        padding-bottom: 3rem;
-        max-width: 1400px;
-    }
+        .block-container {
+            padding-top: 2rem;
+            padding-bottom: 3rem;
+            max-width: 1400px;
+        }
 
-    /* Header principal */
-    .mitre-header {
-        background: linear-gradient(
-            135deg,
-            #111111 0%,
-            #1b1b1b 100%
-        );
-        border-left: 8px solid #F2C300;
-        border-radius: 12px;
-        padding: 28px 32px;
-        margin-bottom: 28px;
-    }
+        /* =========================
+           ENCABEZADO
+        ========================= */
 
-    .mitre-club {
-        color: #F2C300;
-        font-size: 15px;
-        font-weight: 700;
-        letter-spacing: 1.8px;
-        text-transform: uppercase;
-        margin-bottom: 5px;
-    }
+        .mitre-header {
+            background: linear-gradient(
+                135deg,
+                #111111 0%,
+                #1b1b1b 100%
+            );
+            border-left: 8px solid #F2C300;
+            border-radius: 12px;
+            padding: 30px 34px;
+            margin-bottom: 28px;
+        }
 
-    .mitre-title {
-        color: white;
-        font-size: 34px;
-        font-weight: 800;
-        margin-bottom: 4px;
-        line-height: 1.1;
-    }
+        .mitre-club {
+            color: #F2C300;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 1.8px;
+            text-transform: uppercase;
+            margin-bottom: 7px;
+        }
 
-    .mitre-subtitle {
-        color: #D8D8D8;
-        font-size: 17px;
-        font-weight: 400;
-        margin-top: 8px;
-    }
+        .mitre-title {
+            color: #FFFFFF;
+            font-size: 36px;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 7px;
+        }
 
-    /* Títulos de sección */
-    .section-title {
-        font-size: 22px;
-        font-weight: 700;
-        color: #171717;
-        margin-top: 14px;
-        margin-bottom: 16px;
-    }
+        .mitre-subtitle {
+            color: #D5D5D5;
+            font-size: 18px;
+            font-weight: 400;
+        }
 
-    /* Tarjetas */
-    .home-card {
-        background-color: white;
-        border: 1px solid #E3E3E3;
-        border-top: 4px solid #F2C300;
-        border-radius: 10px;
-        padding: 22px;
-        min-height: 180px;
-        box-shadow: 0px 2px 7px rgba(0, 0, 0, 0.04);
-    }
+        /* =========================
+           SECCIONES
+        ========================= */
 
-    .home-card-title {
-        font-size: 20px;
-        font-weight: 700;
-        color: #151515;
-        margin-bottom: 10px;
-    }
+        .section-title {
+            font-size: 24px;
+            font-weight: 750;
+            color: #171717;
+            margin-top: 30px;
+            margin-bottom: 16px;
+        }
 
-    .home-card-text {
-        color: #555555;
-        font-size: 15px;
-        line-height: 1.5;
-    }
+        /* =========================
+           TARJETAS
+        ========================= */
 
-    /* Flujo inferior */
-    .workflow-box {
-        background-color: #111111;
-        color: white;
-        border-radius: 10px;
-        padding: 20px 24px;
-        margin-top: 10px;
-    }
+        .home-card {
+            background-color: #FFFFFF;
+            border: 1px solid #E1E1E1;
+            border-top: 5px solid #F2C300;
+            border-radius: 11px;
+            padding: 22px;
+            min-height: 215px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
 
-    .workflow-number {
-        color: #F2C300;
-        font-weight: 800;
-    }
+        .home-card-title {
+            font-size: 19px;
+            font-weight: 750;
+            color: #111111;
+            margin-bottom: 13px;
+        }
 
-    /* Sidebar */
-    [data-testid="stSidebar"] {
-        background-color: #111111;
-    }
+        .home-card-text {
+            color: #555555;
+            font-size: 15px;
+            line-height: 1.55;
+        }
 
-    [data-testid="stSidebar"] * {
-        color: #F4F4F4;
-    }
+        /* =========================
+           FLUJO
+        ========================= */
 
-    [data-testid="stSidebarNav"] a:hover {
-        background-color: rgba(242, 195, 0, 0.15);
-    }
+        .workflow-box {
+            background-color: #111111;
+            color: #FFFFFF;
+            border-radius: 11px;
+            padding: 22px 26px;
+            margin-top: 10px;
+            line-height: 2;
+        }
 
-    </style>
-    """,
+        .workflow-number {
+            color: #F2C300;
+            font-weight: 800;
+        }
+
+        /* =========================
+           SIDEBAR
+        ========================= */
+
+        [data-testid="stSidebar"] {
+            background-color: #111111;
+        }
+
+        [data-testid="stSidebar"] * {
+            color: #F4F4F4;
+        }
+
+        [data-testid="stSidebarNav"] a:hover {
+            background-color: rgba(242, 195, 0, 0.15);
+        }
+
+        </style>
+        """
+    ),
     unsafe_allow_html=True,
 )
 
@@ -155,29 +172,30 @@ with col_logo:
 
         st.image(
             str(logo_path),
-            width=110,
+            width=115,
         )
 
     else:
 
-        # Mientras no esté cargado el escudo
         st.markdown(
-            """
-            <div style="
-                width:100px;
-                height:100px;
-                border-radius:12px;
-                background:#111111;
-                color:#F2C300;
-                display:flex;
-                align-items:center;
-                justify-content:center;
-                font-size:30px;
-                font-weight:800;
-            ">
-                CAM
-            </div>
-            """,
+            dedent(
+                """
+                <div style="
+                    width:110px;
+                    height:110px;
+                    border-radius:14px;
+                    background:#111111;
+                    color:#F2C300;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    font-size:30px;
+                    font-weight:800;
+                ">
+                    CAM
+                </div>
+                """
+            ),
             unsafe_allow_html=True,
         )
 
@@ -185,23 +203,25 @@ with col_logo:
 with col_header:
 
     st.markdown(
-        """
-        <div class="mitre-header">
+        dedent(
+            """
+            <div class="mitre-header">
 
-            <div class="mitre-club">
-                Club Atlético Mitre
+                <div class="mitre-club">
+                    Club Atlético Mitre
+                </div>
+
+                <div class="mitre-title">
+                    Secretaría Técnica
+                </div>
+
+                <div class="mitre-subtitle">
+                    Departamento de Scouting
+                </div>
+
             </div>
-
-            <div class="mitre-title">
-                Secretaría Técnica
-            </div>
-
-            <div class="mitre-subtitle">
-                Departamento de Scouting
-            </div>
-
-        </div>
-        """,
+            """
+        ),
         unsafe_allow_html=True,
     )
 
@@ -212,12 +232,12 @@ with col_header:
 
 st.markdown(
     """
-    Herramienta interna para la **gestión, seguimiento y evaluación de jugadores**.
+Herramienta interna para la **gestión, seguimiento y evaluación de jugadores**.
 
-    Centraliza el proceso de scouting desde la detección inicial y la carga de
-    observaciones hasta la elaboración de informes y la conformación de
-    campogramas de mercado.
-    """
+Centraliza el proceso de scouting desde la detección inicial y la carga de
+observaciones hasta la elaboración de informes y la conformación de
+campogramas de mercado.
+"""
 )
 
 
@@ -226,7 +246,13 @@ st.markdown(
 # ============================================================
 
 st.markdown(
-    '<div class="section-title">Módulos de trabajo</div>',
+    dedent(
+        """
+        <div class="section-title">
+            Módulos de trabajo
+        </div>
+        """
+    ),
     unsafe_allow_html=True,
 )
 
@@ -237,22 +263,25 @@ c1, c2, c3, c4 = st.columns(4)
 with c1:
 
     st.markdown(
-        """
-        <div class="home-card">
+        dedent(
+            """
+            <div class="home-card">
 
-            <div class="home-card-title">
-                🔍 Explorador
+                <div class="home-card-title">
+                    🔍 Explorador
+                </div>
+
+                <div class="home-card-text">
+                    Consultá la base de jugadores utilizando filtros
+                    por categoría, club, posición y otros criterios.
+                    <br><br>
+                    Accedé a los reportes e informes realizados
+                    sobre cada jugador.
+                </div>
+
             </div>
-
-            <div class="home-card-text">
-                Consultá la base de jugadores utilizando filtros por categoría,
-                club, posición y otros criterios.
-                <br><br>
-                Accedé a los reportes e informes realizados sobre cada jugador.
-            </div>
-
-        </div>
-        """,
+            """
+        ),
         unsafe_allow_html=True,
     )
 
@@ -260,22 +289,25 @@ with c1:
 with c2:
 
     st.markdown(
-        """
-        <div class="home-card">
+        dedent(
+            """
+            <div class="home-card">
 
-            <div class="home-card-title">
-                ➕ Jugadores y reportes
+                <div class="home-card-title">
+                    ➕ Jugadores y reportes
+                </div>
+
+                <div class="home-card-text">
+                    Incorporá nuevos jugadores a la base y registrá
+                    observaciones realizadas durante partidos o
+                    análisis de video.
+                    <br><br>
+                    Editá y administrá jugadores existentes.
+                </div>
+
             </div>
-
-            <div class="home-card-text">
-                Incorporá nuevos jugadores a la base y registrá observaciones
-                realizadas durante partidos o análisis de video.
-                <br><br>
-                También permite editar y administrar jugadores existentes.
-            </div>
-
-        </div>
-        """,
+            """
+        ),
         unsafe_allow_html=True,
     )
 
@@ -283,22 +315,25 @@ with c2:
 with c3:
 
     st.markdown(
-        """
-        <div class="home-card">
+        dedent(
+            """
+            <div class="home-card">
 
-            <div class="home-card-title">
-                📋 Campograma
+                <div class="home-card-title">
+                    📋 Campograma
+                </div>
+
+                <div class="home-card-text">
+                    Organizá los jugadores detectados por categoría
+                    y posición.
+                    <br><br>
+                    Compará candidatos y accedé directamente a sus
+                    reportes desde el tablero de mercado.
+                </div>
+
             </div>
-
-            <div class="home-card-text">
-                Organizá los jugadores detectados por categoría y posición.
-                <br><br>
-                Compará candidatos y accedé directamente a sus reportes
-                desde el tablero de mercado.
-            </div>
-
-        </div>
-        """,
+            """
+        ),
         unsafe_allow_html=True,
     )
 
@@ -306,22 +341,25 @@ with c3:
 with c4:
 
     st.markdown(
-        """
-        <div class="home-card">
+        dedent(
+            """
+            <div class="home-card">
 
-            <div class="home-card-title">
-                📄 Informes
+                <div class="home-card-title">
+                    📄 Informes
+                </div>
+
+                <div class="home-card-text">
+                    Consolidá las distintas observaciones de un
+                    jugador en un informe final.
+                    <br><br>
+                    Guardá conclusiones y generá documentos
+                    exportables.
+                </div>
+
             </div>
-
-            <div class="home-card-text">
-                Consolidá las distintas observaciones de un jugador en un
-                informe final.
-                <br><br>
-                Guardá conclusiones y generá documentos exportables.
-            </div>
-
-        </div>
-        """,
+            """
+        ),
         unsafe_allow_html=True,
     )
 
@@ -331,36 +369,48 @@ with c4:
 # ============================================================
 
 st.markdown(
-    '<div class="section-title">Flujo de trabajo</div>',
+    dedent(
+        """
+        <div class="section-title">
+            Flujo de trabajo
+        </div>
+        """
+    ),
     unsafe_allow_html=True,
 )
 
 
 st.markdown(
-    """
-    <div class="workflow-box">
+    dedent(
+        """
+        <div class="workflow-box">
 
-        <span class="workflow-number">01</span>
-        &nbsp; Detectar y crear el jugador
-        &nbsp;&nbsp;→&nbsp;&nbsp;
+            <span class="workflow-number">01</span>
+            &nbsp; Detectar y crear jugador
 
-        <span class="workflow-number">02</span>
-        &nbsp; Cargar observaciones
-        &nbsp;&nbsp;→&nbsp;&nbsp;
+            &nbsp;&nbsp;→&nbsp;&nbsp;
 
-        <span class="workflow-number">03</span>
-        &nbsp; Consultar y comparar
-        &nbsp;&nbsp;→&nbsp;&nbsp;
+            <span class="workflow-number">02</span>
+            &nbsp; Cargar observaciones
 
-        <span class="workflow-number">04</span>
-        &nbsp; Incorporar al campograma
-        &nbsp;&nbsp;→&nbsp;&nbsp;
+            &nbsp;&nbsp;→&nbsp;&nbsp;
 
-        <span class="workflow-number">05</span>
-        &nbsp; Consolidar informe final
+            <span class="workflow-number">03</span>
+            &nbsp; Consultar y comparar
 
-    </div>
-    """,
+            &nbsp;&nbsp;→&nbsp;&nbsp;
+
+            <span class="workflow-number">04</span>
+            &nbsp; Incorporar al campograma
+
+            &nbsp;&nbsp;→&nbsp;&nbsp;
+
+            <span class="workflow-number">05</span>
+            &nbsp; Consolidar informe final
+
+        </div>
+        """
+    ),
     unsafe_allow_html=True,
 )
 

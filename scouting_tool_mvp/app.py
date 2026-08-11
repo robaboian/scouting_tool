@@ -40,7 +40,7 @@ with col_logo:
     if logo_path.exists():
         st.image(
             str(logo_path),
-            width=160,
+            width=170,
         )
 
 

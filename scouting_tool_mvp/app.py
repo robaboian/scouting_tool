@@ -157,8 +157,7 @@ st.markdown(
 # ENCABEZADO
 # ============================================================
 
-logo_path = Path("assets/escudo_mitre.png")
-
+logo_path = Path(__file__).resolve().parent / "assets" / "escudo_mitre.png"
 
 col_logo, col_header = st.columns(
     [1, 8],

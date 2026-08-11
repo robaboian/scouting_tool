@@ -408,6 +408,62 @@ edited_df = st.data_editor(
 
 
 # ============================================================
+# QUITAR DEL CAMPOGRAMA AL DESMARCAR
+# ============================================================
+
+visible_player_ids = set(
+    edited_df[
+        "player_id"
+    ]
+    .astype(str)
+    .tolist()
+)
+
+
+checked_campograma_ids = set(
+    edited_df.loc[
+        edited_df[
+            "Agregar a campograma"
+        ],
+        "player_id",
+    ]
+    .astype(str)
+    .tolist()
+)
+
+
+existing_visible_campograma_ids = (
+    set(
+        str(player_id)
+        for player_id
+        in campograma_player_ids
+    )
+    &
+    visible_player_ids
+)
+
+
+removed_from_campograma = (
+    existing_visible_campograma_ids
+    -
+    checked_campograma_ids
+)
+
+
+if removed_from_campograma:
+
+    repo.delete_where(
+        "campograma",
+        "player_id",
+        list(
+            removed_from_campograma
+        ),
+    )
+
+    st.rerun()
+
+
+# ============================================================
 # AGREGAR AL CAMPOGRAMA
 # ============================================================
 
@@ -900,8 +956,14 @@ else:
         ("Áreas consolidadas", "areas_consolidadas"),
         ("Áreas de mejora", "areas_mejora"),
         ("Conclusión", "conclusion"),
-        ("Características determinantes", "caracteristicas_determinantes"),
-        ("Enlaces de video", "enlaces_video"),
+        (
+            "Características determinantes",
+            "caracteristicas_determinantes",
+        ),
+        (
+            "Enlaces de video",
+            "enlaces_video",
+        ),
     ]
 
 
